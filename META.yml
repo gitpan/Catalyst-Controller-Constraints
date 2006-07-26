@@ -1,0 +1,17 @@
+# http://module-build.sourceforge.net/META-spec.html
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         Catalyst-Controller-Constraints
+version:      0.10_01
+version_from: lib/Catalyst/Controller/Constraints.pm
+installdirs:  site
+requires:
+    Catalyst::Runtime:             5.7
+    Class::Delegator:              0
+    Exception::Class:              0
+    Hash::Merge:                   0
+    Moose:                         0.05
+    Scalar::Util:                  0
+    Test::More:                    0
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.30_01
