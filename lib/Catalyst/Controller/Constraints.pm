@@ -10,11 +10,11 @@ use strict;
 
 =head1 VERSION
 
-0.10_01 - First Development Release. Production use not recommended yet.
+0.10_02 - Development Release. Production use not recommended yet.
 
 =cut
 
-our $VERSION = '0.10_01';
+our $VERSION = '0.10_02';
 
 use NEXT;
 use Hash::Merge;
@@ -128,7 +128,7 @@ my %own_constraints = (
 
 =head1 DESCRIPTION
 
-This controller base class for L<Catalyst|Catalyst-Runtime> enables you to
+This controller base class for L<Catalyst> enables you to
 apply constraints to your action arguments.
 
 =head1 USAGE
@@ -314,7 +314,7 @@ Sometimes you don't want to override a constraint's behaviour, but rather
 add another layer above it. This is where constraint inheritance comes in:
 
   Word		=> qr/^\w*$/,
-  UserName	=> sub { length $_ > 5 },
+  UserName	=> { check => sub { length $_ > 5 }, inherit_from => 'Word' },
 
 =head2 Using And Collapsing Multiple Arguments
 

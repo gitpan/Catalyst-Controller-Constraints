@@ -1,17 +1,31 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Catalyst-Controller-Constraints
-version:      0.10_01
-version_from: lib/Catalyst/Controller/Constraints.pm
-installdirs:  site
+---
+name: Catalyst-Controller-Constraints
+version: 0.10_02
+author:
+  - Robert 'phaylon' Sedlacek (phaylon@dunkelheit.at)
+abstract: Constraint Signatures for Controller Actions
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
 requires:
-    Catalyst::Runtime:             5.7
-    Class::Delegator:              0
-    Exception::Class:              0
-    Hash::Merge:                   0
-    Moose:                         0.05
-    Scalar::Util:                  0
-    Test::More:                    0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.30_01
+  Catalyst::Runtime: 5.70
+  Class::Delegator: 0
+  Exception::Class: 0
+  Hash::Merge: 0
+  Moose: 0.05
+  Scalar::Util: 0
+  Test::More: 0
+provides:
+  Catalyst::Controller::Constraints:
+    file: lib/Catalyst/Controller/Constraints.pm
+    version: 0.10_02
+  Catalyst::Controller::Constraints::Action:
+    file: lib/Catalyst/Controller/Constraints/Action.pm
+  Catalyst::Controller::Constraints::Argument:
+    file: lib/Catalyst/Controller/Constraints/Argument.pm
+  Catalyst::Controller::Constraints::Constraint:
+    file: lib/Catalyst/Controller/Constraints/Constraint.pm
+generated_by: Module::Build version 0.2804
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

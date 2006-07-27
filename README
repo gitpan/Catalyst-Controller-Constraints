@@ -1,0 +1,356 @@
+NAME
+    Catalyst::Controller::Constraints - Constraint Signatures for Controller
+    Actions
+
+VERSION
+    0.10_02 - Development Release. Production use not recommended yet.
+
+SYNOPSIS
+      package MyApp::Controller::Foo;
+      ...
+      use base qw(Catalyst::Controller::Constraints);
+
+      __PACKAGE__->config(
+          constraints => {
+
+              #   allow only digits for type 'Integer'
+              Integer => qr/^\d+$/,
+
+              #   allow only word chars for type 'Word'
+              Word    => sub { /^\w+$/ },
+
+              #   validate user id and inflate to object
+              User    => {
+
+                  #   check the user id
+                  check   => sub {
+                      my ( $self, $c, $id ) = @_;
+                      return $c->is_valid_user_id( $id );
+                  },
+
+                  #   forward to this action if the validation failed
+                  on_fail => 'invalid_user',
+
+                  #   if value is valid, run it through this filter
+                  #   afterwards
+                  post_filter => sub {
+                      my ( $self, $c, $id ) = @_;
+                      $c->fetch_user_by_id( $id );
+                  },
+              }
+
+              #   inheritance
+              HighInteger => {
+                  inherit_from => 'Integer',
+                  check        => sub { $_ > 22 },
+              },
+
+              #   collapse multiple arguments
+              MyDate => {
+
+                  #   take three integers and return one value
+                  takes => 3,
+                  gives => 1,
+
+                  #   inflate to a datetime object
+                  post_filter  => sub {
+                      my ( $self, $c, $y, $m, $d ) = @_;
+                      DateTime->new(
+                          year => $y, month => $m, day => $d );
+                  }
+              }
+          }
+      );
+
+      #   add two integers, just throws exception on constraint failure
+      sub add : Local Args(2) Constraints(Integer a, Integer b) {
+          my ( $self, $c ) = @_;
+          $c->res->body( $_{a} + $_{b} );
+      }
+
+      #   puts the word into the stash, under the key 'foo'
+      sub stashword : Local Args(1) Constraints( Word foo* ) { }
+
+      #   user_obj ends as a user object in the stash
+      sub view_user : Local Args(1) Constraints( User user_obj* ) { }
+      sub invalid_user : Private {
+          #   handle invalid userid
+      }
+
+      1;
+
+DESCRIPTION
+    This controller base class for Catalyst enables you to apply constraints
+    to your action arguments.
+
+USAGE
+    This describes how this controller base class is used. The first thing
+    that has to be done is to use this instead of "Catalyst::Controller" as
+    base class:
+
+      package MyApp::Controller::Foo;
+      ...
+      use base qw(Catalyst::Controller::Constraints);
+      ...
+
+  Defining Constraints
+    A constraint definition has no needed keys, though the "check" option is
+    the most important. It can contain a code reference, a regular
+    expression reference, or an array reference, containing a list of the
+    former stated:
+
+      MyNumA => { check => qr/^\d+$/ },
+      MyNumB => { check => sub { $_ =~ qr/^\d+$/ } },
+      MyNumC => { check => [qr/^\d+$/, sub { $_ > 23 }] },
+
+    If you just want to supply a check var, you can shortcut that:
+
+      MyNumA => qr/^\d+$/,
+
+    As you can see, the arguments value is localized to $_ in your code
+    reference to keep the definitions more readable. The @_ array contains
+    the controller, the context, and then the constraints arguments, like an
+    action working with the values.
+
+    There are some more options to specify, but let's walk them through step
+    by step. There's a index of them at the bottom for quick referencing.
+
+    In every callback ("pre_filter", "check" and "post_filter") you are
+    provided with the controller and context objects through $_{ctrl} and
+    $_{ctx}. There's also "has_param" and "param", but we'll be talking
+    about them later.
+
+    There are three possible sources for constraint definitions:
+
+    Shipped constraints
+            See "Default Constraints" for information on which constraints
+            are shipped and ready to use.
+
+    Constraints defined application wide
+            Constraints that are placed in your application config under the
+            "constraints" key are available to the whole application. Any
+            settings made under the name of a shipped constraint are merged
+            together with the shipped config. The application constraints
+            have, of course, priority over the shipped ones. The merging is
+            especially useful to define app and per-controller actions for
+            "Handling Validation Errors". Here is an example:
+
+              package MyApp;
+              use Catalyst/ -Debug /;
+
+              __PACKAGE__->config(
+                constraints => {
+                  EvenNumber => {
+                    check => sub { $_ % 2 },
+                    on_fail => 'odd_number',
+                  },
+                  Int => {
+                    on_fail => 'not_an_integer',
+                  },
+                },
+              );
+
+    Constraints defined for one controller
+            These definitions look exactly as those for application wide
+            constraints as they're introduced above. They differ in that
+            they are only defined for the current controller, and have
+            priority over shipped and application wide constraints.
+
+    For more control over the error message sent to the user, there is a
+    function available named "_()". A call to "_( 'foobar' )" will throw a
+    validation exception that can be handled (See "Handling Validation
+    Errors"). The exception will have it's "user_msg" field set to the
+    passed value.
+
+  Applying Constraints To Actions
+    The default constraint attribute name is "Constraints", but you can
+    change that with
+
+      __PACKAGE__->config( constraint_attribute => 'Foo' );
+
+    in either your application or your controller. The constraints itself
+    are just applied to actions through this attribute's parameter, as usual
+    in Catalyst:
+
+      sub foo : Local Constraint( Int bar, Int baz ) { ... }
+
+    You don't have to specify a constraint name. If you'd just do a
+
+      sub foo : Local Constraint( Int bar, baz ) { ... }
+
+    then "baz" wouldn't be checked by any constraint. But you could still
+    reference it by name. This can also be combined with another convenience
+    function, autostashing:
+
+      sub foo : Local Constraint( bar*, baz* ) { ... }
+
+    would when, for example, called with "foo/23/17" set the values "bar"
+    and "baz" in the stash to the corresponding values.
+
+    The original, unfiltered and unchanged values are passed to the action
+    through @_, so this controller base class doesn't interfere with
+    Catalyst's argument passing style at all. However, you can also access
+    the values through the global %_ hash. In the above example, $_{bar}
+    would be 23 and $_{baz} would be set to 17.
+
+  Handling Validation Errors
+    Through the "on_fail" option it's possible to handle a validation error
+    of "check". It's value can be a code reference, treated like an action,
+    and a relative or absolute private action path. It's arguments will be
+    The current controller, the context, and the exception object with the
+    following fields:
+
+    constraint
+            This is the name of the constraint type, for example, "Int".
+
+    value   The value that didn't pass the inspection.
+
+    user_msg
+            Will be set to the value passed to "_()" if the exception was
+            raised by this function.
+
+    argument
+            The name of the argument that didn't pass the validation.
+
+    Here is a complete example:
+
+      package MyApp::Controller::Foo;
+      use base qw(Catalyst::Controller::Constraints);
+
+      __PACKAGE__->config(
+        constraints => {
+          MyInt => {
+            check   => qr/^\d+$/,
+            on_fail => 'invalid_input',
+          },
+        }
+      );
+
+      sub add : Local Args(2) Constraints( MyInt a, MyInt b ) {
+        $_[1]->response->body( $_{a} + $_{b} );
+      }
+
+      sub invalid_input : Private {
+        my ( $self, $c, $e ) = @_;
+        $c->res->body(
+          sprintf 'Invalid format of %s for %s: %s',
+              $e->constraint,
+              $e->argument,
+              $e->value,
+        );
+      }
+
+      1;
+
+  Constraint Inheritance
+    Sometimes you don't want to override a constraint's behaviour, but
+    rather add another layer above it. This is where constraint inheritance
+    comes in:
+
+      Word          => qr/^\w*$/,
+      UserName      => { check => sub { length $_ > 5 }, inherit_from => 'Word' },
+
+  Using And Collapsing Multiple Arguments
+    Some arguments consist of more than one value, a date for example. You
+    might want to use three values to create a datetime object. This is a
+    simple example of this:
+
+      MyDate => {
+        takes => 3,
+            gives => 1,
+            post_filter => sub {
+                    my ( $self, $c, $y, $m, $d ) = @_;
+                    DateTime->new( year => $y, month => $m, day => $d );
+            }
+      }
+
+    Note the "takes" and "gives" values. The first indicates that this
+    constraint takes the next three arguments, not just one. This has as
+    consequence that "pre_filter", "post_filter", "check" and the exception
+    objects "value" field contain a hashreference. Their return values are
+    stored in an array reference, too. So a "pre_filter" that takes more
+    than one value, but returns only one, results in an arrayref in the next
+    calls ("check" and "post_filter" as value.
+
+    The "gives" value only affects how the value is passed to the dispatched
+    action. A value of 1 (default is the value of "takes", which has a
+    default of 1) sets the value in %_ directly, rather than through an
+    array reference.
+
+  Pre- And Post-Filters
+    This is pretty simple. These are callbacks that are called before and
+    after "check" is running. They receive the value(s) in $_ and starting
+    with index 2 in @_. Their return value is used as new value for the next
+    calls.
+
+  Constraint Parameters
+    To prevent the need for many equal constraints, it is possible to pass a
+    parameter to them. Usage examples would be Model constraints, that check
+    for existance, permission and load the row from the database. A
+    parameter can be passed to a constraint with "[...]" directly after its
+    name:
+
+      sub foo : Local Constraint( Model[Category] cat* ) { ... }
+
+    (This would also autostash the resulting object, due to "*".)
+
+    Access to the parameter is provided through the global %_ hashes key
+    "param", read: $_{param}. To find out if a parameter was actually
+    provided, you can check $_{has_param}.
+
+  Default Constraints
+    To set the "on_fail" handler for shipped constraints, override those
+    parameter's option in your controller or application config.
+
+    Digits  Checks if the value consists only of digits, this means it's
+            just a regular expression checking for "^\d+$".
+
+    Number  Utilises Scalar::Util's "looks_like_number" function to check if
+            the value, well, looks like a number.
+
+    String[$re]
+            Takes a regular expression parameter and validates the string
+            against it. E.g.
+
+              sub foo : Local Constraints( String[^\w+$] bar ) { }
+
+CONSTRAINT OPTION REFERENCE
+    takes   Specifies how many arguments are used as input.
+
+    gives   Specifies how many values are going to arrive at the action.
+
+    pre_filter
+            Callback, runs before "check". Value is afterwards what was
+            returned.
+
+    check   Validation check. Return true or false, or throw a validation
+            exception with a "user_msg" through "_()".
+
+    post_filter
+            Like "pre_filter", but after check.
+
+METHODS
+  create_action
+    Overrides Catalyst::Controller's "create_action" to wrap the original
+    one in a Catalyst::Controller::Constraints::Action proxy object.
+
+  _fetch_constraint
+    Returns a constraint object by constraint name. If this type was already
+    created, a cached version is returned.
+
+  _ACTION
+    Does the handling of the validation exceptions.
+
+SEE ALSO
+    <http://www.catalystframework.org/>,
+
+AUTHOR
+    Robert 'phaylon' Sedlacek - "<phaylon@dunkelheit.at>"
+
+LICENSE AND COPYRIGHT
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+    The full text of the license can be found in the LICENSE file included
+    with this module.
+

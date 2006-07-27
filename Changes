@@ -1,6 +1,11 @@
 Revision history for Perl module Catalyst::Controller::Constraints
 
-0.90_01 Tue Jul 25 16:45:10 2006
+0.10_02 Thu Jul 27 12:22:33 2006
+    - Released EU:MM can't do license, switched to M:B
+    - Corrected README and Makefile.PL.
+    - POD for inheritance was incomplete, oops.
+
+0.10_01 Tue Jul 25 16:45:10 2006
     - original version; created by ExtUtils::ModuleMaker 0.47
 
 

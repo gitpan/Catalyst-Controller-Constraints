@@ -1,15 +1,16 @@
+Build.PL
 Changes
 lib/Catalyst/Controller/Constraints.pm
 lib/Catalyst/Controller/Constraints/Action.pm
 lib/Catalyst/Controller/Constraints/Argument.pm
 lib/Catalyst/Controller/Constraints/Constraint.pm
 LICENSE
-Makefile.PL
 MANIFEST			This list of files
+META.yml
+README
 t/01-basic-functionality.t
 t/02-constraint-signatures.t
 t/lib/TestApp.pm
 t/lib/TestApp/Controller/Basic.pm
 t/lib/TestApp/Controller/OtherAttrName.pm
 t/lib/TestApp/Controller/Signatures.pm
-META.yml                                 Module meta-data (added by MakeMaker)
